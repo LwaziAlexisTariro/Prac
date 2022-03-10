@@ -1,22 +1,27 @@
 from socket import *
+
 import threading
 # 192.168.101.239 -- mac N
 # alexpc 192.168.101.246 home
 
-clients = []
-users = []
-chatArray =[]
+clients = []                                            #stores clients' information         
+chatArray=[]                                            #stores chats, clients/users involved, messages and online status
+#chatArray =['','','',[[]],[]]
 
+ossDetectionA = False
+lossDetectionB = False
 
-
-serverPort = 12000
-serverSocket = socket(AF_INET, SOCK_DGRAM)
-serverSocket.bind(('', serverPort))
+serverPort = 12000                                      #server port
+serverSocket = socket(AF_INET, SOCK_DGRAM)              #server socket
+serverSocket.bind(('', serverPort))                     #binds server port to socket
 print('The server is ready to receive')
 
 
+def sendMessage(message, receiver_IP):                  #function for sending messages to receiver client
+    serverSocket.sendto(message.encode(), receiver_IP)
 
-def recipient(senderName,chatName):
+
+def recipient(senderName,chatName):                     #finds recipient's name based off of the chat they are part of and the sender
     for chat in chatArray:
         if chat[0] == chatName:
             if chat[1] == senderName:
@@ -25,83 +30,183 @@ def recipient(senderName,chatName):
                 return chat[1]
 
 
-def findAddress(destination_address):
-    address =()
+def findAddress(username):                   #finds client's ip address based off of their username
     for user in clients:
         
-        if user[0] == destination_address:
+        if user[0] == username:
             return user[1]
 
-def findName(destination_address):
-    address =()
+def findName(destination_address):           #finds client's username based off of their ip address and socket
     for user in clients:
         
         if user[1] == destination_address:
             return user[0]
-def findChat(chatName):
-    address =()
+
+def findChat(chatName):                     #finds chat with the chatname
     for chat in chatArray:
         
         if chat[0] == chatName:
             return chat
 
-        chatName = name[0]+name[1]
+        #chatName = clientNames[0]+clientNames[1]
 
-def findUserInfo(name):
-    for client in clients:
-        if name==client[0]:
-            return client[1]
+def storeMessage(sender, receiver, message):    #stores chat messages for history functionality
+    for chat in chatArray:
+        
+        if chat[0] == chatName:     
+            chat[3].append([sender,receiver, message, False])
+    
+    
 receiverAddress = ()
 while True:
     # receives message with CODE PROTOCOL character at end of string
     # and formats to remove this character
     message, clientAddress = serverSocket.recvfrom(2048)
+    
     decodedMessage = message.decode()
+   
+        
 
     messageArr = decodedMessage.split('\n')
     protocolCode=messageArr[0]
+    #checkMessage1 = messageArr[2]
 
+    
    
     if protocolCode == 'HELLO':
-
-        if clientAddress not in clients:
+        tempClient=(messageArr[1], clientAddress)
+        if tempClient not in clients:                        #checks if client is in address list, if not, they are added
             clients.append((messageArr[1], clientAddress))
 
     if protocolCode == 'NEW CHAT':
-        person1 = findName(clientAddress)
-        person2= messageArr[1]
+        person1 = findName(clientAddress)                       #stores message sender
+        person2= messageArr[1]                                  #stores message receiver
         
 
-        name = []
-        name.append(person1)
-        name.append(person2)
-        name.sort()
+        clientNames = [person1, person2]
+        #name.append(person1)
+        #name.append(person2)
+        clientNames.sort()                                      #sorts names in alphabetical order (for identification purposes, alphabetic orde to reduce dplication o)
 
 
-        chatName = name[0]+name[1]
+        chatName = clientNames[0]+clientNames[1]                #creates chat identifier
+        
         #first item is chat name, secnd and third are the participants
         chat = []
-        chat.append(chatName)
-        chat.append(name[0])
-        chat.append(name[1])
 
-        chatArray.append(chat)
+        activeUsers = [clientNames[0], clientNames[1]]          #active/online users
+        chat.append(chatName)                                   #populating new chat entry
+        chat.append(clientNames[0])
+        chat.append(clientNames[1])
+        #activeUsers.append(name[0])
+        #activeUsers.append(name[1])
+       
+        chat.append([])
+        chat.append(activeUsers)
 
+
+
+        if chat not in chatArray:
+            chatArray.append(chat)
+        else:
+            for chat in chatArray:
+
+                if chatName== chat[0]:
+
+
+                    for message in chat[3]:
+                        if message[3]==False:
+                            receiver_IP = findAddress(message[1])
+
+                            if message[1] in chat[4]:
+                                sendMessage(message[2], receiver_IP)
+                                message[3]=True
+                                sendMessage("**Message sent**", clientAddress)
+
+                                
     if protocolCode == 'OLD CHAT':
-        person1 = findName(clientAddress)
-        person2= messageArr[1]
+        person1 = findName(clientAddress)                       #stores message sender
+        person2= messageArr[1]                                  #stores message receiver
+        
 
-        name = []
-        name.append(person1)
-        name.append(person2)
-        name.sort()
+        clientNames = [person1, person2]
+        #name.append(person1)
+        #name.append(person2)
+        clientNames.sort()                                      #sorts names in alphabetical order (for identification purposes, alphabetic orde to reduce dplication o)
+
+
+        chatName = clientNames[0]+clientNames[1]                #creates chat identifier
+        
+        #first item is chat name, secnd and third are the participants
+      #active/online users
+       
+        #activeUsers.append(name[0])
+        #activeUsers.append(name[1])
+       
+    
+                
+        
+        for chat in chatArray:
+
+            if chatName== chat[0]:
+                chat[4].append(person1)
+                flag=False
+             
+                sendMessage('---------------------This is the beginning of your chat---------------',receiver_IP)
+                for message in chat[3]:
+                    if(message[3]==True):
+                        if(message[1]==person2):
+                            sendMessage(message[2], receiver_IP)
+                        else:
+                            sendMessage('\t\t\t\t\t\t\t'+message[2], receiver_IP)
+                    elif(message[3]==False and flag==False ):
+                        sendMessage('*************************   Unread Messages    ***********************',receiver_IP)
+                        sendMessage('\t\t\t\t\t\t\t'+message[2], receiver_IP)
+                        tempClientAddress= findAddress(message[0])
+                        sendMessage("**Message sent**", tempClientAddress)
+                        message[3]=True
+                        flag=True
+                    else:
+                        sendMessage('\t\t\t\t\t\t\t'+message[2], receiver_IP)
+                        message[3]=True
+
 
     if protocolCode=='CHAT':
+
+        sendMessage("**Message received by server**", clientAddress)
         
         senderName = findName(clientAddress)
         sendTo = recipient(senderName, chatName)
         receiver_IP = findAddress(sendTo)
-        serverSocket.sendto(messageArr[2].encode(), receiver_IP)
+    
+        
+        storeMessage(senderName,sendTo,messageArr[2])
+        for chat in chatArray:
+
+                if chatName== chat[0]:
+
+
+                    for message in chat[3]:
+                        if message[3]==False:
+                            receiver_IP = findAddress(message[1])
+
+                            if message[1] in chat[4]:
+                                sendMessage('\t\t\t\t\t\t\t'+message[2]+'\n'+messageArr[3], receiver_IP)
+                                message[3]=True
+                                sendMessage("**Message sent**", clientAddress)
+
+        #sendMessage('\t\t\t'+messageArr,receiver_IP)
+        
+        
+    if protocolCode=='LEAVE':
+        clientName = findName(clientAddress)
+
+        for chat in chatArray:
+            if chatName== chat[0]:
+                chat[4].remove(clientName)
+            
+        
+
 
 
     
