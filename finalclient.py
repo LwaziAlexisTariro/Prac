@@ -2,7 +2,7 @@ import zlib
 from socket import *
 import threading
 
-serverName = '196.42.95.187'
+serverName = '196.168.101.229'
 
 serverPort = 12000
 
