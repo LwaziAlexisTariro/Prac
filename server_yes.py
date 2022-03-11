@@ -6,10 +6,6 @@ import threading
 
 clients = []                                            #stores clients' information         
 chatArray=[]                                            #stores chats, clients/users involved, messages and online status
-#chatArray =['','','',[[]],[]]
-
-ossDetectionA = False
-lossDetectionB = False
 
 serverPort = 12000                                      #server port
 serverSocket = socket(AF_INET, SOCK_DGRAM)              #server socket
@@ -69,7 +65,7 @@ while True:
 
     messageArr = decodedMessage.split('\n')
     protocolCode=messageArr[0]
-    #checkMessage1 = messageArr[2]
+
 
     
    
@@ -84,8 +80,6 @@ while True:
         
 
         clientNames = [person1, person2]
-        #name.append(person1)
-        #name.append(person2)
         clientNames.sort()                                      #sorts names in alphabetical order (for identification purposes, alphabetic orde to reduce dplication o)
 
 
@@ -98,22 +92,22 @@ while True:
         chat.append(chatName)                                   #populating new chat entry
         chat.append(clientNames[0])
         chat.append(clientNames[1])
-        #activeUsers.append(name[0])
-        #activeUsers.append(name[1])
        
         chat.append([])
         chat.append(activeUsers)
 
 
-
-        if chat not in chatArray:
+        
+        if chat not in chatArray:                               #if chat not already in array, add it
             chatArray.append(chat)
         else:
             for chat in chatArray:
 
                 if chatName== chat[0]:
 
-
+                    #IF ANY MESSAGES IN CHAT HAVE NOT BEEN SENT, AND RECEIVER IS NOW ONLINE,
+                    #  DELIVER THE MESSAGES TO RECEIVER
+                    # AND NOTIFY SENDER THAT MESSAGES HAVE BEEN DELIVERED
                     for message in chat[3]:
                         if message[3]==False:
                             receiver_IP = findAddress(message[1])
@@ -128,10 +122,7 @@ while True:
         person1 = findName(clientAddress)                       #stores message sender
         person2= messageArr[1]                                  #stores message receiver
         
-
         clientNames = [person1, person2]
-        #name.append(person1)
-        #name.append(person2)
         clientNames.sort()                                      #sorts names in alphabetical order (for identification purposes, alphabetic orde to reduce dplication o)
 
 
@@ -139,26 +130,24 @@ while True:
         
         #first item is chat name, secnd and third are the participants
       #active/online users
-       
-        #activeUsers.append(name[0])
-        #activeUsers.append(name[1])
-       
-    
-                
-        
         for chat in chatArray:
-
+            #add user to list of users currently online in chat
             if chatName== chat[0]:
                 chat[4].append(person1)
                 flag=False
              
                 sendMessage('---------------------This is the beginning of your chat---------------',receiver_IP)
+                #send Chat history of all messages from beginning of chat
                 for message in chat[3]:
+                    #resends all messsages that have already been delivered
                     if(message[3]==True):
                         if(message[1]==person2):
                             sendMessage(message[2], receiver_IP)
                         else:
                             sendMessage('\t\t\t\t\t\t\t'+message[2], receiver_IP)
+
+                    #sends the rest of messages that havent yet been delivered under the heading Unread messages
+                    #also takes into account the sender and receiver of each message and formats messages accordingly
                     elif(message[3]==False and flag==False ):
                         sendMessage('*************************   Unread Messages    ***********************',receiver_IP)
                         sendMessage('\t\t\t\t\t\t\t'+message[2], receiver_IP)
@@ -172,20 +161,20 @@ while True:
 
 
     if protocolCode=='CHAT':
-
+        #notify the sender client that the message has been received by the server
         sendMessage("**Message received by server**", clientAddress)
         
         senderName = findName(clientAddress)
         sendTo = recipient(senderName, chatName)
         receiver_IP = findAddress(sendTo)
     
-        
+        #adds the message to the list of messages in chat
         storeMessage(senderName,sendTo,messageArr[2])
         for chat in chatArray:
 
                 if chatName== chat[0]:
 
-
+                    #loops through messages and, if the receiver is online, sends any messages to the receiver that have not already been sent.
                     for message in chat[3]:
                         if message[3]==False:
                             receiver_IP = findAddress(message[1])
@@ -195,57 +184,12 @@ while True:
                                 message[3]=True
                                 sendMessage("**Message sent**", clientAddress)
 
-        #sendMessage('\t\t\t'+messageArr,receiver_IP)
-        
-        
+    #if the protocol code is leave, removes user from the chat's list of currently active users
     if protocolCode=='LEAVE':
         clientName = findName(clientAddress)
 
         for chat in chatArray:
             if chatName== chat[0]:
                 chat[4].remove(clientName)
-            
-        
 
-
-
-    
-        #first item is chat name, secnd and third are the participants
-     
-
-
-        # CHECK FOR RECEIVER ADDRESS IN CLIENT ADDRESS TABLE. IF MATCH, SET RECEIVER IP AND PORT
-   
-        '''EACH MESSAGE CARRIES THE IP ADDRESS OF THE INTENDED RECEPIENT WITH IT. 
-        CURRENT FORMAT:
-        MESSAGE_IP_2'''
-        # THIS CODE ENABLES THE RECEIVER CLIENT TO CHANGE
-        # CODE LOOKS FOR RECEIVER IP MATCH IN CLIENT ADDRESS TABLE AND SETS RECEIVER ADDRESS TO THIS NEW MATCH
-    
-
-
-"""while True:
-    message, clientAddress = serverSocket.recvfrom(2048)
-    decodedMessage= message.decode()
-    if decodedMessage[-1]=='0':
-        if clientAddress not in clients:
-            clients.append(clientAddress)
-    if decodedMessage[-1]=='1':
-        for client in clients:
-            tempmessage= message[:-1]
-            if client[0]==tempmessage:
-                receiverAddress=client
-    if decodedMessage[-1]=='2':
-        serverSocket.sendto(message.encode(), receiverAddress)
-    
-"""
-#modifiedMessage = message.decode().upper()
-#serverSocket.sendto(modifiedMessage.encode(), ip(''))
-#serverSocket.sendto(modifiedMessage.encode(), clientAddress)
-
-
-'''def sendAll():
-    for client in clients:
-        modifiedMessage = message.decode()
-        serverSocket.sendto(modifiedMessage.encode(), client)'''
 
